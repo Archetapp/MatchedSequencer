@@ -9,7 +9,10 @@ final class SequenceCoordinator: ObservableObject {
     @Published var activeStepId: AnyHashable? = nil
     @Published var isRunning: Bool = false
     @Published var keptAliveStepIds: Set<AnyHashable> = []
-    @Published public var activeMatchedRoleMap: [AnyHashable: Role] = [:]
+    @Published var activeMatchedRoleMap: [AnyHashable: Role] = [:]
+    
+    // Subject to signal sequence completion
+    let sequenceDidEndSubject = PassthroughSubject<Void, Never>()
     
     // Internal state
     private var isRunningInternally: Bool = false // Prevents overlapping Task runs
@@ -53,40 +56,51 @@ final class SequenceCoordinator: ObservableObject {
     
     private func runSequence() {
         // print("Coordinator: runSequence called. isRunningInternally=\(isRunningInternally)") // REMOVED
-        guard !isRunningInternally else { 
+        guard !isRunningInternally else {
             // print("Coordinator: runSequence aborted: already running internally.") // REMOVED
             return
         }
 
         isRunningInternally = true
         self.isRunning = true // Publish external state
-        
-        // --- START Initial State Setup ---
-        var initialRoleMap: [AnyHashable: Role] = [:]
-        for step in self.steps where step.type == .matched {
-            initialRoleMap[step.id] = .source // Default all matched to source
-        }
-        self.activeMatchedRoleMap = initialRoleMap
-        self.keptAliveStepIds = [] // Reset keep-alive
-        // --- END Initial State Setup ---
 
-        // Local copy for updates within the Task
-        var currentKeptAliveIds: Set<AnyHashable> = [] 
-        var currentRoleMap = initialRoleMap
-        
+        // Local copies for updates within the Task will be initialized inside
+        var currentKeptAliveIds: Set<AnyHashable> = [] // Initialize here, will be set in reset
+        var currentRoleMap: [AnyHashable: Role] = [:] // Initialize here, will be set in reset
+
         let effectiveSteps = reversed ? steps.reversed() : steps
         // print("Coordinator: runSequence starting Task. reversed=\(reversed), animates=\(animates)") // REMOVED
 
         Task {
+            // --- START Initial State Reset ---
+            // Ensure reset happens without animation, regardless of `self.animates`
             var initialResetTransaction = Transaction()
-            if !animates { initialResetTransaction.disablesAnimations = true }
-             // Use objectWillChange.send() before state change for manual publishing if needed,
-             // but @Published should handle activeStepId and isRunning
-            withTransaction(initialResetTransaction) { self.activeStepId = nil }
-            
-            if animates {
-                 try? await Task.sleep(nanoseconds: 50_000_000)
+            initialResetTransaction.disablesAnimations = true
+
+            withTransaction(initialResetTransaction) {
+                self.activeStepId = nil // Reset active step
+                self.keptAliveStepIds = [] // Reset keep-alive set
+
+                // Calculate and set the initial role map
+                var initialRoleMap: [AnyHashable: Role] = [:]
+                for step in self.steps where step.type == .matched {
+                    initialRoleMap[step.id] = .source // Default all matched to source
+                }
+                self.activeMatchedRoleMap = initialRoleMap
+
+                // Update local copies for the Task after reset
+                currentKeptAliveIds = self.keptAliveStepIds
+                currentRoleMap = self.activeMatchedRoleMap
+                
+                // print("DEBUG: SequenceCoordinator - Initial Reset State: Active=\(String(describing: self.activeStepId)), Roles=\(self.activeMatchedRoleMap), KeptAlive=\(self.keptAliveStepIds)")
             }
+            // --- END Initial State Reset ---
+
+            // Optional brief pause *after* reset, *if* animating, to allow UI to settle?
+            // This might not be necessary if the non-animated reset is effective.
+            // if animates {
+            //      try? await Task.sleep(nanoseconds: 16_000_000) // ~1 frame
+            // }
 
             // --- Loop through Steps --- START
             var currentIndex = 0
@@ -211,19 +225,44 @@ final class SequenceCoordinator: ObservableObject {
             // --- Final Keep Alive Check --- END
 
             // Sequence finished Transaction
-            var finalResetTransaction = Transaction()
-            if animates {
-                finalResetTransaction.animation = .default
-            } else {
-                finalResetTransaction.disablesAnimations = true
+            var finalCompletionTransaction = Transaction() // Renamed from finalResetTransaction
+            // Animation for the final step to nil transition depends on 'animates' flag
+            if !animates {
+                 finalCompletionTransaction.disablesAnimations = true
             }
-            withTransaction(finalResetTransaction) {
+            // If we need a specific animation for the cleanup, set it here.
+            // else { finalCompletionTransaction.animation = .default }
+
+            // Reset activeStepId at the very end
+            // KeepAlive state is handled before this
+            withTransaction(finalCompletionTransaction) {
                 self.activeStepId = nil
             }
-            
-            isRunning = false 
+
+            isRunning = false
             isRunningInternally = false
             // print("Coordinator Task finished.") // REMOVED
+            
+            // Signal that the sequence ended naturally
+            sequenceDidEndSubject.send()
         }
+    }
+    
+    // Function to reset sequence state
+    func resetSequence() {
+        // Reset all published animation state
+        self.activeStepId = nil
+        self.keptAliveStepIds = []
+        
+        // Reset role map to initial state
+        var initialRoleMap: [AnyHashable: Role] = [:]
+        for step in self.steps where step.type == .matched {
+            initialRoleMap[step.id] = .source // Default all matched to source
+        }
+        self.activeMatchedRoleMap = initialRoleMap
+        
+        // Reset running state
+        isRunning = false
+        isRunningInternally = false
     }
 } 

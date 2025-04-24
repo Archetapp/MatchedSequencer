@@ -17,6 +17,25 @@ public extension MatchedSequencerContainer {
         )
     }
     
+    /// Resets the animation sequence state completely, ensuring a clean start for the next animation.
+    /// Use this when having issues with animation flickering or inconsistent states.
+    /// - Parameter reset: A binding that triggers the reset when set to true. Will be set back to false after reset.
+    func sequenceReset(when reset: Binding<Bool>) -> some View {
+        self.onChange(of: reset.wrappedValue) { oldValue, newValue in
+            if newValue {
+                // If the reset flag is true, perform the reset
+                withAnimation(nil) {
+                    self.coordinator.resetSequence()
+                }
+                
+                // After resetting, set the flag back to false
+                DispatchQueue.main.async {
+                    reset.wrappedValue = false
+                }
+            }
+        }
+    }
+    
     /// Runs the sequence in reverse order if set to true.
     /// - Parameter reversed: A boolean indicating whether to reverse the sequence. Defaults to true.
     func sequenceReversed(_ reversed: Bool = true) -> MatchedSequencerContainer {
@@ -54,6 +73,21 @@ public extension MatchedSequencerContainer {
             isRunningExternally: isRunning,
             reversed: self.reversed,
             animates: self.animates,
+            content: self.content
+        )
+    }
+    
+    /// Executes the provided action when the sequence completes normally.
+    /// This action is *not* called if the sequence is cancelled or interrupted.
+    /// - Parameter action: The closure to execute upon sequence completion.
+    func onSequenceEnd(_ action: @escaping () -> Void) -> MatchedSequencerContainer {
+        .init(
+            steps: self.steps,
+            startTrigger: self.$startTrigger,
+            isRunningExternally: self.$isRunningExternally,
+            reversed: self.reversed,
+            animates: self.animates,
+            onSequenceEndAction: action,
             content: self.content
         )
     }

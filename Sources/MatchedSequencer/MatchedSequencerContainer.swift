@@ -2,7 +2,7 @@ import SwiftUI
 
 public struct MatchedSequencerContainer<Content: View>: View {
     @Namespace internal var sequenceNamespace
-    @StateObject private var coordinator = SequenceCoordinator() // Keep coordinator private
+    @StateObject internal var coordinator = SequenceCoordinator()
     
     // Make configuration properties internal for access by extension/modifiers
     internal var steps: [SequenceStep]
@@ -12,6 +12,9 @@ public struct MatchedSequencerContainer<Content: View>: View {
     // Make bindings internal for access by extension/modifiers
     @Binding internal var startTrigger: Bool
     @Binding internal var isRunningExternally: Bool
+    
+    // Closure to execute on sequence end
+    internal var onSequenceEndAction: (() -> Void)? = nil
     
     let content: (Namespace.ID) -> Content
 
@@ -34,6 +37,7 @@ public struct MatchedSequencerContainer<Content: View>: View {
         isRunningExternally: Binding<Bool>,
         reversed: Bool,
         animates: Bool,
+        onSequenceEndAction: (() -> Void)? = nil,
         @ViewBuilder content: @escaping (Namespace.ID) -> Content
     ) {
         self.steps = steps
@@ -41,6 +45,7 @@ public struct MatchedSequencerContainer<Content: View>: View {
         self._isRunningExternally = isRunningExternally
         self.reversed = reversed
         self.animates = animates
+        self.onSequenceEndAction = onSequenceEndAction
         self.content = content
     }
 
@@ -75,6 +80,10 @@ public struct MatchedSequencerContainer<Content: View>: View {
                      isRunningExternally = newValue
                  }
              }
+            // Listen for the coordinator's end signal
+            .onReceive(coordinator.sequenceDidEndSubject) { _ in
+                onSequenceEndAction?() // Execute the stored action if it exists
+            }
     }
 }
 
