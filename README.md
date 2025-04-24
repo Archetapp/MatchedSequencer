@@ -90,7 +90,7 @@ A SwiftUI library for orchestrating complex sequences of animations involving bo
 *(Placeholder)* Add MatchedSequencer as a Swift Package dependency to your project.
 
 ```
-https://your-repo-url/MatchedSequencer.git
+https://github.com/Archetapp/MatchedSequencer.git
 ```
 
 ## Examples
