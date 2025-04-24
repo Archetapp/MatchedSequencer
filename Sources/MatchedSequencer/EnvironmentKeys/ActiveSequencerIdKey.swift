@@ -5,7 +5,7 @@ private struct ActiveSequencerIdKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    var activeSequencerId: AnyHashable? {
+    public var activeSequencerId: AnyHashable? {
         get { self[ActiveSequencerIdKey.self] }
         set { self[ActiveSequencerIdKey.self] = newValue }
     }

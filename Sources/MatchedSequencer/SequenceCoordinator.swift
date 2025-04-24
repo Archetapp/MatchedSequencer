@@ -9,7 +9,7 @@ final class SequenceCoordinator: ObservableObject {
     @Published var activeStepId: AnyHashable? = nil
     @Published var isRunning: Bool = false
     @Published var keptAliveStepIds: Set<AnyHashable> = []
-    @Published var activeMatchedRoleMap: [AnyHashable: Role] = [:]
+    @Published public var activeMatchedRoleMap: [AnyHashable: Role] = [:]
     
     // Internal state
     private var isRunningInternally: Bool = false // Prevents overlapping Task runs

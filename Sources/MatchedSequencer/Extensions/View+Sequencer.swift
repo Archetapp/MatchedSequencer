@@ -12,12 +12,14 @@ public extension View {
     ///   - role: `.source` or `.destination`.
     ///   - properties: The properties to match (default: `.frame`).
     ///   - anchor: The anchor point for the transition (default: `.center`).
-    /// - Returns: A view modified with `matchedGeometryEffect`.
-    public func matchedSequencer(
+    ///   - placeholder: An optional ViewBuilder closure defining a view to display when this matched item is not the active role.
+    /// - Returns: A view modified with `matchedGeometryEffect` or displaying the placeholder.
+    func matchedSequencer<PlaceholderContent: View>(
         _ id: AnyHashable,
         _ role: Role, 
         properties: MatchedGeometryProperties = .frame, 
-        anchor: UnitPoint = .center
+        anchor: UnitPoint = .center,
+        @ViewBuilder placeholder: @escaping () -> PlaceholderContent = { EmptyView() }
     ) -> some View {
         guard role == .source || role == .destination else {
              assertionFailure("Invalid role `\(role)` used with `matchedSequencer`. Use `.source` or `.destination`.")
@@ -32,7 +34,8 @@ public extension View {
                     role: role, 
                     properties: properties, 
                     anchor: anchor, 
-                    isSource: role == .source
+                    isSource: role == .source,
+                    placeholder: placeholder
                 )
             )
         )
@@ -46,7 +49,7 @@ public extension View {
     /// - Parameter keepAlive: If true (default), the view remains in the hierarchy but invisible when inactive.
     ///                        If false, the view is removed from the hierarchy (using `EmptyView`) when inactive.
     /// - Returns: A view that conditionally appears based on the active sequence step.
-    public func sequencer(_ id: AnyHashable, keepAlive: Bool = true) -> some View {
+    func sequencer(_ id: AnyHashable, keepAlive: Bool = true) -> some View {
         // This modifier handles its own visibility based on environment,
         // so no conditional return needed here. Can return ModifiedContent directly.
         self.modifier(TransitionSequencerModifier(id: id, keepAlive: keepAlive))

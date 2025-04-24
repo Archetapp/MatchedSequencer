@@ -11,6 +11,23 @@ internal struct MatchedGeometrySequencerModifier: ViewModifier {
     let properties: MatchedGeometryProperties
     let anchor: UnitPoint
     let isSource: Bool
+    let placeholder: () -> AnyView
+
+    init<P: View>(
+        id: AnyHashable,
+        role: Role,
+        properties: MatchedGeometryProperties,
+        anchor: UnitPoint,
+        isSource: Bool,
+        @ViewBuilder placeholder: @escaping () -> P
+    ) {
+        self.id = id
+        self.role = role
+        self.properties = properties
+        self.anchor = anchor
+        self.isSource = isSource
+        self.placeholder = { AnyView(placeholder()) }
+    }
 
     func body(content: Content) -> some View {
         let expectedActiveRole = activeMatchedRoleMap[id] ?? .source
@@ -31,7 +48,7 @@ internal struct MatchedGeometrySequencerModifier: ViewModifier {
                 content
             }
         } else {
-            EmptyView()
+            placeholder()
         }
     }
 } 

@@ -7,7 +7,7 @@ private struct KeptAliveStepIdsKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    var keptAliveStepIds: Set<AnyHashable> {
+    public var keptAliveStepIds: Set<AnyHashable> {
         get { self[KeptAliveStepIdsKey.self] }
         set { self[KeptAliveStepIdsKey.self] = newValue }
     }
@@ -20,7 +20,7 @@ private struct ActiveMatchedRoleMapKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    var activeMatchedRoleMap: [AnyHashable: Role] {
+    public var activeMatchedRoleMap: [AnyHashable: Role] {
         get { self[ActiveMatchedRoleMapKey.self] }
         set { self[ActiveMatchedRoleMapKey.self] = newValue }
     }
