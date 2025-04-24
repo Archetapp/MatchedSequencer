@@ -85,14 +85,14 @@ struct AdvancedSequenceExample: View {
                     ZStack {
                         // Source Card
                         RoundedRectangle(cornerRadius: 15)
-                            .fill(.blue.gradient)
+                            .fill(.blue)
                             .overlay(Text("Initial State").font(.title2).bold().foregroundColor(.white))
                             .matchedSequencer(AdvancedSequenceId.cardPair, .source)
                             .frame(height: 150)
                         
                         // Destination Card
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(.green.gradient)
+                            .fill(.green)
                             .overlay(
                                 VStack {
                                     Image(systemName: "checkmark.circle.fill")

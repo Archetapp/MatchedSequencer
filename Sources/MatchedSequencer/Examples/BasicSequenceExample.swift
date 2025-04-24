@@ -15,32 +15,31 @@ struct BasicSequenceExample: View {
     let sequence: [SequenceStep] = [
         .init(
             SequenceElementId.circlePair,
-            .interpolatingSpring(stiffness: 150, damping: 10),
-            type: .matched,
+            .spring(),
+            type: .matched
         ),
         .init(
             SequenceElementId.animatedText,
-            .interpolatingSpring(stiffness: 170, damping: 15),
+            .spring(),
             type: .transition,
-            delay: 0.0,
             waitForCompletion: false
         ),
         .init(
             SequenceElementId.otherContent,
-            .interpolatingSpring(stiffness: 170, damping: 15),
+            .bouncy(),
             type: .transition,
             delay: 0.0,
             waitForCompletion: true
         ),
         .init(
             SequenceElementId.circlePair,
-            .interpolatingSpring(stiffness: 150, damping: 10),
+            .spring(),
             type: .matched,
             delay: 0.1
         ),
         .init(
             SequenceElementId.finishedState,
-            .interpolatingSpring(stiffness: 100, damping: 12),
+            .spring(),
             type: .transition,
             delay: 0.2
         )
@@ -91,8 +90,8 @@ struct BasicSequenceExample: View {
 
                    SubView()
                     
-                    Circle().fill(.indigo)
-                        .matchedSequencer(SequenceElementId.circlePair, .destination)
+                    Circle().foregroundStyle(.indigo)
+                        .matchedSequencer(SequenceElementId.circlePair, .destination, properties: [.size, .frame])
                         .frame(width: 150, height: 150)
                     
                     Text("Animated Text")
@@ -136,11 +135,24 @@ struct BasicSequenceExample: View {
 
 struct SubView: View {
     var body: some View {
-        Circle().fill(.cyan)
+        SubView2()
+    }
+}
+
+struct SubView2: View {
+    var body: some View {
+        SubView3()
+    }
+}
+
+struct SubView3: View {
+    var body: some View {
+        Circle().foregroundStyle(.cyan)
             .matchedSequencer(SequenceElementId.circlePair, .source)
             .frame(width: 100, height: 100)
     }
 }
+
 struct BasicSequenceExample_Previews: PreviewProvider {
     static var previews: some View {
         BasicSequenceExample()

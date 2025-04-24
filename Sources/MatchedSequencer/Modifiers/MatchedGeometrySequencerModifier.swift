@@ -25,7 +25,7 @@ internal struct MatchedGeometrySequencerModifier: ViewModifier {
                         in: ns,
                         properties: properties, 
                         anchor: anchor, 
-                        isSource: isSource
+                        isSource: true
                     )
             } else {
                 content
