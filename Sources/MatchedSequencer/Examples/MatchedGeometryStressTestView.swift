@@ -1,5 +1,4 @@
 import SwiftUI
-import MatchedSequencer
 
 struct MatchedGeometryStressTestView: View {
     // Use state for triggering and observing the sequence

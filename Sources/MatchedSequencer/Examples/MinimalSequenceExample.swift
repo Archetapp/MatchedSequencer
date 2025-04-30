@@ -55,7 +55,6 @@ struct MinimalSequenceExample: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
             }
             .startSequence(when: $triggerSequence)
             .isRunning($sequenceIsActive)

@@ -152,7 +152,6 @@ struct AdvancedSequenceExample: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Color(.systemGray6))
                 .ignoresSafeArea(edges: .bottom)
 
             }
