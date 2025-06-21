@@ -13,6 +13,8 @@ public extension MatchedSequencerContainer {
             isRunningExternally: self.$isRunningExternally,
             reversed: self.reversed,
             animates: self.animates,
+            onSequenceEndAction: self.onSequenceEndAction,
+            onSequenceStepChangeAction: self.onSequenceStepChangeAction,
             content: self.content
         )
     }
@@ -45,6 +47,8 @@ public extension MatchedSequencerContainer {
             isRunningExternally: self.$isRunningExternally,
             reversed: reversed,
             animates: self.animates,
+            onSequenceEndAction: self.onSequenceEndAction,
+            onSequenceStepChangeAction: self.onSequenceStepChangeAction,
             content: self.content
         )
     }
@@ -59,6 +63,8 @@ public extension MatchedSequencerContainer {
             isRunningExternally: self.$isRunningExternally,
             reversed: self.reversed,
             animates: animates,
+            onSequenceEndAction: self.onSequenceEndAction,
+            onSequenceStepChangeAction: self.onSequenceStepChangeAction,
             content: self.content
         )
     }
@@ -73,6 +79,8 @@ public extension MatchedSequencerContainer {
             isRunningExternally: isRunning,
             reversed: self.reversed,
             animates: self.animates,
+            onSequenceEndAction: self.onSequenceEndAction,
+            onSequenceStepChangeAction: self.onSequenceStepChangeAction,
             content: self.content
         )
     }
@@ -88,6 +96,23 @@ public extension MatchedSequencerContainer {
             reversed: self.reversed,
             animates: self.animates,
             onSequenceEndAction: action,
+            onSequenceStepChangeAction: self.onSequenceStepChangeAction,
+            content: self.content
+        )
+    }
+    
+    /// Executes the provided action whenever the active sequence step changes.
+    /// The action receives the current step (or nil when sequence ends) and its index.
+    /// - Parameter action: The closure to execute on each step change, receiving (step, index).
+    func onSequenceStepChange(_ action: @escaping (SequenceStep<ID>?, Int?) -> Void) -> MatchedSequencerContainer {
+        return .init(
+            steps: self.steps,
+            startTrigger: self.$startTrigger,
+            isRunningExternally: self.$isRunningExternally,
+            reversed: self.reversed,
+            animates: self.animates,
+            onSequenceEndAction: self.onSequenceEndAction,
+            onSequenceStepChangeAction: action,
             content: self.content
         )
     }

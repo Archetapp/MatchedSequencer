@@ -12,17 +12,11 @@ struct MatchedGeometryStressTestView: View {
 
     // Define the sequence steps: Alternate the role of 'sharedCircle'
     private let sequenceSteps: [SequenceStep] = [
-        // Start with source visible (small, blue, left)
         SequenceStep(GeometryIDs.sharedCircle, type: .matched, delay: 0.5, keepAlive: true),
-        // Transition to destination (large, red, right)
         SequenceStep(GeometryIDs.sharedCircle, .smooth(extraBounce: 0.4), type: .matched, delay: 0.5, waitForCompletion: true),
-        // Transition back to source - MATCH DURATION TO FIRST TRANSITION
         SequenceStep(GeometryIDs.sharedCircle, .smooth(extraBounce: 0.4), type: .matched, delay: 0.5, waitForCompletion: true),
-//         --- Temporarily removed subsequent steps for debugging ---
-         // Transition back to destination quickly
-         SequenceStep(GeometryIDs.sharedCircle, .smooth(extraBounce: 0.4), type: .matched, delay: 0.1, waitForCompletion: true), // Maybe wait to see it?
-         // Transition back to source very quickly
-         SequenceStep(GeometryIDs.sharedCircle, .smooth(extraBounce: 0.4), type: .matched, delay: 0.0, waitForCompletion: true),
+        SequenceStep(GeometryIDs.sharedCircle, .smooth(extraBounce: 0.4), type: .matched, delay: 0.1, waitForCompletion: true),
+        SequenceStep(GeometryIDs.sharedCircle, .smooth(extraBounce: 0.4), type: .matched, delay: 0.0, waitForCompletion: true),
     ]
 
     var body: some View {

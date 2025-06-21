@@ -3,31 +3,34 @@ import Combine
 
 // ObservableObject to manage the sequence state and logic
 @MainActor // Ensure state updates happen on the main thread
-final class SequenceCoordinator: ObservableObject {
+final class SequenceCoordinator<ID: Hashable>: ObservableObject {
     
     // Published properties for views to observe
-    @Published var activeStepId: AnyHashable? = nil
+    @Published var activeStepId: ID? = nil
     @Published var isRunning: Bool = false
-    @Published var keptAliveStepIds: Set<AnyHashable> = []
-    @Published var activeMatchedRoleMap: [AnyHashable: Role] = [:]
+    @Published var keptAliveStepIds: Set<ID> = []
+    @Published var activeMatchedRoleMap: [ID: Role] = [:]
     
     // Subject to signal sequence completion
     let sequenceDidEndSubject = PassthroughSubject<Void, Never>()
+    
+    // Subject to signal step changes
+    let sequenceStepDidChangeSubject = PassthroughSubject<(step: SequenceStep<ID>?, index: Int?), Never>()
     
     // Internal state
     private var isRunningInternally: Bool = false // Prevents overlapping Task runs
     private var cancellables = Set<AnyCancellable>()
     
     // Configuration (set externally, e.g., by modifiers)
-    var steps: [SequenceStep] = []
+    var steps: [SequenceStep<ID>] = []
     var reversed: Bool = false
     var animates: Bool = true
+    var onSequenceStepChangeAction: ((SequenceStep<ID>?, Int?) -> Void)? = nil
     // We still need a way to trigger externally
     // Let's use a PassthroughSubject for this
     let startTriggerSubject = PassthroughSubject<Void, Never>()
 
     init() {
-        // print("SequenceCoordinator init") // REMOVED
         
         // Observe the start trigger subject
         startTriggerSubject
@@ -38,26 +41,24 @@ final class SequenceCoordinator: ObservableObject {
     }
     
     // Function to configure the coordinator (called by container/modifiers)
-    func configure(steps: [SequenceStep], reversed: Bool, animates: Bool) {
+    func configure(steps: [SequenceStep<ID>], reversed: Bool, animates: Bool, onSequenceStepChange: ((SequenceStep<ID>?, Int?) -> Void)? = nil) {
          // Only update if changed to avoid unnecessary churn
          if self.steps.map({ $0.id }) != steps.map({ $0.id }) { // Basic check
             self.steps = steps
-            // print("Coordinator configured: steps count = \(steps.count)") // REMOVED
          } 
          if self.reversed != reversed {
              self.reversed = reversed
-             // print("Coordinator configured: reversed = \(reversed)") // REMOVED
          }
          if self.animates != animates {
              self.animates = animates
-              // print("Coordinator configured: animates = \(animates)") // REMOVED
          }
+         
+         // Store the callback
+         self.onSequenceStepChangeAction = onSequenceStepChange
     }
     
     private func runSequence() {
-        // print("Coordinator: runSequence called. isRunningInternally=\(isRunningInternally)") // REMOVED
         guard !isRunningInternally else {
-            // print("Coordinator: runSequence aborted: already running internally.") // REMOVED
             return
         }
 
@@ -65,11 +66,10 @@ final class SequenceCoordinator: ObservableObject {
         self.isRunning = true // Publish external state
 
         // Local copies for updates within the Task will be initialized inside
-        var currentKeptAliveIds: Set<AnyHashable> = [] // Initialize here, will be set in reset
-        var currentRoleMap: [AnyHashable: Role] = [:] // Initialize here, will be set in reset
+        var currentKeptAliveIds: Set<ID> = [] // Initialize here, will be set in reset
+        var currentRoleMap: [ID: Role] = [:] // Initialize here, will be set in reset
 
         let effectiveSteps = reversed ? steps.reversed() : steps
-        // print("Coordinator: runSequence starting Task. reversed=\(reversed), animates=\(animates)") // REMOVED
 
         Task {
             // --- START Initial State Reset ---
@@ -82,7 +82,7 @@ final class SequenceCoordinator: ObservableObject {
                 self.keptAliveStepIds = [] // Reset keep-alive set
 
                 // Calculate and set the initial role map
-                var initialRoleMap: [AnyHashable: Role] = [:]
+                var initialRoleMap: [ID: Role] = [:]
                 for step in self.steps where step.type == .matched {
                     initialRoleMap[step.id] = .source // Default all matched to source
                 }
@@ -92,7 +92,6 @@ final class SequenceCoordinator: ObservableObject {
                 currentKeptAliveIds = self.keptAliveStepIds
                 currentRoleMap = self.activeMatchedRoleMap
                 
-                // print("DEBUG: SequenceCoordinator - Initial Reset State: Active=\(String(describing: self.activeStepId)), Roles=\(self.activeMatchedRoleMap), KeptAlive=\(self.keptAliveStepIds)")
             }
             // --- END Initial State Reset ---
 
@@ -124,7 +123,7 @@ final class SequenceCoordinator: ObservableObject {
                 var lastStepInBatchRequiresWait = false
                 
                 // Use local vars to accumulate state changes for the batch
-                var batchActiveStepId: AnyHashable? = self.activeStepId
+                var batchActiveStepId: ID? = self.activeStepId
                 var batchRoleMap = currentRoleMap // Use local map from Task scope
                 var batchKeepAliveIds = currentKeptAliveIds // Use local set from Task scope
                 
@@ -166,7 +165,6 @@ final class SequenceCoordinator: ObservableObject {
                             // 4. Update Keep Alive Set for the batch (Remove current ID)
                             batchKeepAliveIds.remove(currentBatchStep.id)
                             
-                            // print("DEBUG: SequenceCoordinator - Activating Batch Step: \(currentBatchStep.id)") // REMOVED
                             // --- End State Updates --- 
                             
                             stepsProcessedInBatch += 1
@@ -189,7 +187,15 @@ final class SequenceCoordinator: ObservableObject {
                     self.activeStepId = batchActiveStepId
                     self.activeMatchedRoleMap = batchRoleMap
                     self.keptAliveStepIds = batchKeepAliveIds
-                    // print("DEBUG: SequenceCoordinator - Batch End State: Active=\(String(describing: self.activeStepId)), Roles=\(self.activeMatchedRoleMap), KeptAlive=\(self.keptAliveStepIds)") // REMOVED
+                    
+                    // Notify about step change
+                    if let activeId = batchActiveStepId,
+                       let activeStep = self.steps.first(where: { $0.id == activeId }) {
+                        let stepIndex = effectiveSteps.firstIndex(where: { $0.id == activeId })
+                        self.onSequenceStepChangeAction?(activeStep, stepIndex)
+                        self.sequenceStepDidChangeSubject.send((activeStep, stepIndex))
+                    }
+                    
                     
                 } // End withTransaction
                 
@@ -220,7 +226,6 @@ final class SequenceCoordinator: ObservableObject {
                    // if it's supposed to be kept alive.
                    // We do this before the final transaction resets the active ID.
                    self.keptAliveStepIds.insert(finalId)
-                   // print("DEBUG: SequenceCoordinator - Keeping final step alive: \(finalId)") // REMOVED
             }
             // --- Final Keep Alive Check --- END
 
@@ -238,10 +243,13 @@ final class SequenceCoordinator: ObservableObject {
             withTransaction(finalCompletionTransaction) {
                 self.activeStepId = nil
             }
+            
+            // Notify about sequence end (nil step)
+            self.onSequenceStepChangeAction?(nil, nil)
+            self.sequenceStepDidChangeSubject.send((nil, nil))
 
             isRunning = false
             isRunningInternally = false
-            // print("Coordinator Task finished.") // REMOVED
             
             // Signal that the sequence ended naturally
             sequenceDidEndSubject.send()
@@ -255,7 +263,7 @@ final class SequenceCoordinator: ObservableObject {
         self.keptAliveStepIds = []
         
         // Reset role map to initial state
-        var initialRoleMap: [AnyHashable: Role] = [:]
+        var initialRoleMap: [ID: Role] = [:]
         for step in self.steps where step.type == .matched {
             initialRoleMap[step.id] = .source // Default all matched to source
         }
