@@ -90,8 +90,8 @@ struct BasicSequenceExample: View {
 
                    SubView()
                     
-                    Circle().foregroundStyle(.indigo)
-                        .matchedSequencer(SequenceElementId.circlePair, .destination, properties: [.size, .frame])
+                    Text("Hello World")
+                        .font(.caption)                        .matchedSequencer(SequenceElementId.circlePair, .destination, properties: [.size, .frame])
                         .frame(width: 150, height: 150)
                     
                     Text("Animated Text")
@@ -147,7 +147,8 @@ struct SubView2: View {
 
 struct SubView3: View {
     var body: some View {
-        Circle().foregroundStyle(.cyan)
+        Text("Hello World")
+            .font(.title)
             .matchedSequencer(SequenceElementId.circlePair, .source)
             .frame(width: 100, height: 100)
     }
